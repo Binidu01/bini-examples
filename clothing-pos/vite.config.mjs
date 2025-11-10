@@ -23,7 +23,7 @@ export default defineConfig(({ command }) => ({
     biniAPIPlugin({ isPreview }),
     biniPreviewPlugin(),
 
-    // 💣 Post-build HTML one-liner
+    // ✅ Post-build HTML minifier
     {
       name: 'bini-html-minifier',
       apply: 'build',
@@ -42,7 +42,6 @@ export default defineConfig(({ command }) => ({
             removeStyleLinkTypeAttributes: true,
             minifyCSS: true,
             minifyJS: true,
-            preserveLineBreaks: false,
           });
           await fs.promises.writeFile(filePath, minified, 'utf8');
         };
@@ -51,8 +50,11 @@ export default defineConfig(({ command }) => ({
           const entries = await fs.promises.readdir(dir, { withFileTypes: true });
           for (const entry of entries) {
             const fullPath = path.join(dir, entry.name);
-            if (entry.isDirectory()) await walk(fullPath);
-            else if (entry.name.endsWith('.html')) await processHTML(fullPath);
+            if (entry.isDirectory()) {
+              await walk(fullPath);
+            } else if (entry.name.endsWith('.html')) {
+              await processHTML(fullPath);
+            }
           }
         };
 
@@ -79,19 +81,30 @@ export default defineConfig(({ command }) => ({
     cors: true,
   },
 
+  // ✅ Hardened build
   build: {
     outDir: '.bini/dist',
     sourcemap: biniConfig.build?.sourcemap !== false,
     emptyOutDir: true,
-    minify: 'terser', // requires terser installed
+    minify: 'terser',
+
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          router: ['react-router-dom'],
+        manualChunks(id) {
+          // ✅ Auto-split everything in node_modules into its own chunk group
+          if (id.includes('node_modules')) {
+            if (id.includes('firebase')) return 'firebase';
+            if (id.includes('react-qr-reader')) return 'qr-reader';
+            if (id.includes('print-js')) return 'printjs';
+            if (id.includes('chart') || id.includes('recharts')) return 'charts';
+            if (id.includes('lucide')) return 'icons';
+            return 'vendor'; // fallback
+          }
         },
       },
     },
+
+    chunkSizeWarningLimit: 700,
   },
 
   resolve: {

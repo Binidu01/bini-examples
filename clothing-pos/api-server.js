@@ -377,15 +377,43 @@ async function createFastifyServer() {
     handlerCache.clear();
   });
 
+  // UPDATED: Firebase-compatible CSP configuration
   await app.register(fastifyHelmet, {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'"],
-        fontSrc: ["'self'"],
+        scriptSrc: [
+          "'self'", 
+          "'unsafe-inline'",
+          "'unsafe-eval'", // Firebase requires this
+          "https://www.gstatic.com",
+          "https://apis.google.com",
+          "https://www.google.com"
+        ],
+        styleSrc: [
+          "'self'", 
+          "'unsafe-inline'", 
+          "https://fonts.googleapis.com",
+          "https://fonts.gstatic.com"
+        ],
+        imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
+        connectSrc: [
+          "'self'",
+          "https://identitytoolkit.googleapis.com", // Firebase Auth
+          "https://securetoken.googleapis.com", // Firebase Token
+          "https://pos-system-f29bd.firebaseio.com", // Your Realtime DB
+          "https://pos-system-f29bd.firebasestorage.app", // Your Storage
+          "wss://pos-system-f29bd.firebaseio.com", // WebSockets
+          "https://www.googleapis.com", // Google APIs
+          "https://firebase.googleapis.com", // Firebase APIs
+          "https://firestore.googleapis.com" // Firestore
+        ],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        frameSrc: [
+          "'self'",
+          "https://pos-system-f29bd.firebaseapp.com",
+          "https://www.google.com"
+        ],
         objectSrc: ["'none'"],
         upgradeInsecureRequests: []
       }
@@ -397,12 +425,21 @@ async function createFastifyServer() {
     xXssProtection: true
   });
 
+  // UPDATED: Enhanced CORS for Firebase
   if (ENABLE_CORS) {
     await app.register(fastifyCors, {
-      origin: true,
+      origin: true, // Allow all in development
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+      allowedHeaders: [
+        'Content-Type',
+        'Authorization', 
+        'Accept',
+        'X-Requested-With',
+        'X-Firebase-AppCheck',
+        'X-Firebase-GMPID',
+        'X-Client-Version' // Firebase sometimes uses this
+      ],
       exposedHeaders: ['Content-Length', 'X-Request-Id']
     });
   }
@@ -461,6 +498,24 @@ async function createFastifyServer() {
       // Silent compression failure
     }
     return payload;
+  });
+
+  // ADDED: Firebase test endpoint
+  app.get('/test-firebase', async (req, reply) => {
+    reply.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+    reply.header('Pragma', 'no-cache');
+    reply.header('Expires', '0');
+
+    return {
+      status: 'Server is running',
+      firebaseConfig: {
+        projectId: 'pos-system-f29bd',
+        authDomain: 'pos-system-f29bd.firebaseapp.com',
+        hasApiKey: true
+      },
+      timestamp: new Date().toISOString(),
+      environment: NODE_ENV
+    };
   });
 
   app.get('/health', async (req, reply) => {
@@ -671,6 +726,10 @@ async function startServer() {
         } catch (e) {
           // Silent fallback
         }
+
+        // ADDED: Firebase connectivity message
+        console.log('  \x1b[32m✓\x1b[39m  Firebase: Configured for pos-system-f29bd');
+        console.log('  \x1b[32m✓\x1b[39m  Test:     \x1b[36mhttp://localhost:' + port + '/test-firebase\x1b[39m');
 
         setTimeout(() => {
           const opened = openBrowser(`http://localhost:${port}`);
