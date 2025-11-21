@@ -14,10 +14,6 @@ import biniConfig from './bini.config.mjs';
 const isPreview = process.env.npm_lifecycle_event === 'preview';
 const isBuild = process.env.NODE_ENV === 'production';
 
-// Detect Codespaces environment
-const inCodespaces = Boolean(process.env.CODESPACE_NAME);
-const port = biniConfig.port || 3000;
-
 export default defineConfig(({ command }) => ({
   plugins: [
     react(),
@@ -27,7 +23,7 @@ export default defineConfig(({ command }) => ({
     biniAPIPlugin({ isPreview }),
     biniPreviewPlugin(),
 
-    // HTML Minification
+    // HTML Minifier
     {
       name: 'bini-html-minifier',
       apply: 'build',
@@ -64,32 +60,19 @@ export default defineConfig(({ command }) => ({
     },
   ],
 
-  // 🔥 DEV SERVER (FIXED for Codespaces, Local, Sandbox)
   server: {
-    port,
+    port: biniConfig.port || 3000,
+    open: true,
+    host: biniConfig.host || 'localhost',
     cors: true,
-    open: false,
-
-    // REQUIRED: expose dev server to Codespaces
-    host: inCodespaces ? '0.0.0.0' : (biniConfig.host || 'localhost'),
-
-    // FIX: HMR over Codespaces domain
-    hmr: inCodespaces
-      ? {
-          protocol: 'wss',
-          host: `${process.env.CODESPACE_NAME}-${port}.app.github.dev`,
-          port: 443,
-        }
-      : {
-          protocol: 'ws',
-          host: 'localhost',
-          port,
-        },
+    hmr: {
+      host: process.env.HMR_HOST || 'localhost',
+      port: process.env.HMR_PORT || 3000,
+    },
   },
 
-  // Public preview server
   preview: {
-    port,
+    port: biniConfig.port || 3000,
     open: true,
     host: '0.0.0.0',
     cors: true,
@@ -106,13 +89,15 @@ export default defineConfig(({ command }) => ({
 
     rollupOptions: {
       output: {
+        // 🎯 CHUNK NAMING - Better caching with content hash
         chunkFileNames: 'js/[name]-[hash].js',
         entryFileNames: 'js/[name]-[hash].js',
-
+        
+        // 📁 ASSET ORGANIZATION
         assetFileNames: (assetInfo) => {
           const info = assetInfo.name.split('.');
-          const ext = info.pop();
-
+          const ext = info[info.length - 1];
+          
           if (/png|jpe?g|gif|svg|webp|avif/.test(ext)) {
             return 'assets/images/[name]-[hash][extname]';
           } else if (/woff|woff2|eot|ttf|otf|ttc/.test(ext)) {
@@ -122,12 +107,12 @@ export default defineConfig(({ command }) => ({
           } else if (ext === 'json') {
             return 'data/[name]-[hash][extname]';
           }
-
           return 'assets/[name]-[hash][extname]';
         },
       },
     },
 
+    // 🔄 TERSER MINIFICATION OPTIONS
     terserOptions: {
       compress: {
         drop_console: true,
@@ -153,6 +138,7 @@ export default defineConfig(({ command }) => ({
     devSourcemap: true,
   },
 
+  // 🔍 OPTIMIZATION HINTS
   ssr: {
     external: ['react', 'react-dom'],
   },
