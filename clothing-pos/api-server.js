@@ -489,7 +489,7 @@ async function createFastifyServer() {
     return payload;
   });
 
-  app.get("/health", async (req, reply) {
+  app.get("/health", async (req, reply) => {
     reply.header("Cache-Control", "no-cache, no-store, must-revalidate");
     return {
       status: "ok",
@@ -507,7 +507,7 @@ async function createFastifyServer() {
     };
   });
 
-  app.get("/metrics", async (req, reply) {
+  app.get("/metrics", async (req, reply) => {
     reply.header("Cache-Control", "no-cache");
     return {
       server: {
