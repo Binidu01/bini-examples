@@ -17,10 +17,13 @@ export default defineConfig(({ command, mode }) => {
   const isBuild = command === 'build';
   const port = biniConfig.port || 3000;
 
-  // Simple HMR configuration - let Vite handle it automatically
+  // Enhanced HMR configuration
   const hmrConfig = env.CODESPACE_NAME ? {
     clientPort: 443
-  } : true;
+  } : {
+    host: process.env.HMR_HOST || 'localhost',
+    port: process.env.HMR_PORT || 3000,
+  };
 
   return {
     plugins: [
@@ -31,6 +34,7 @@ export default defineConfig(({ command, mode }) => {
       biniAPIPlugin({ isPreview }),
       biniPreviewPlugin(),
 
+      // HTML Minifier
       {
         name: 'bini-html-minifier',
         apply: 'build',
@@ -70,16 +74,14 @@ export default defineConfig(({ command, mode }) => {
     server: {
       port,
       host: env.CODESPACE_NAME ? '0.0.0.0' : (biniConfig.host || 'localhost'),
-      open: false,
+      open: !env.CODESPACE_NAME, // Only auto-open in local development
       cors: true,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-      },
       hmr: hmrConfig,
     },
 
     preview: {
       port,
+      open: true,
       host: '0.0.0.0',
       cors: true,
     },
@@ -95,28 +97,42 @@ export default defineConfig(({ command, mode }) => {
 
       rollupOptions: {
         output: {
+          // 🎯 CHUNK NAMING - Better caching with content hash
           chunkFileNames: 'js/[name]-[hash].js',
           entryFileNames: 'js/[name]-[hash].js',
+          
+          // 📁 ASSET ORGANIZATION
           assetFileNames: (assetInfo) => {
             const info = assetInfo.name.split('.');
             const ext = info[info.length - 1];
-            if (/png|jpe?g|gif|svg|webp|avif/.test(ext)) return 'assets/images/[name]-[hash][extname]';
-            if (/woff|woff2|eot|ttf|otf|ttc/.test(ext)) return 'assets/fonts/[name]-[hash][extname]';
-            if (ext === 'css') return 'css/[name]-[hash][extname]';
-            if (ext === 'json') return 'data/[name]-[hash][extname]';
+            
+            if (/png|jpe?g|gif|svg|webp|avif/.test(ext)) {
+              return 'assets/images/[name]-[hash][extname]';
+            } else if (/woff|woff2|eot|ttf|otf|ttc/.test(ext)) {
+              return 'assets/fonts/[name]-[hash][extname]';
+            } else if (ext === 'css') {
+              return 'css/[name]-[hash][extname]';
+            } else if (ext === 'json') {
+              return 'data/[name]-[hash][extname]';
+            }
             return 'assets/[name]-[hash][extname]';
           },
         },
       },
 
+      // 🔄 TERSER MINIFICATION OPTIONS
       terserOptions: {
         compress: {
           drop_console: isBuild,
           drop_debugger: isBuild,
+          pure_funcs: ['console.log', 'console.info'],
           passes: 2,
         },
         format: {
           comments: false,
+        },
+        mangle: {
+          toplevel: true,
         },
       },
     },
@@ -128,6 +144,11 @@ export default defineConfig(({ command, mode }) => {
     css: {
       modules: { localsConvention: 'camelCase' },
       devSourcemap: true,
+    },
+
+    // 🔍 OPTIMIZATION HINTS
+    ssr: {
+      external: ['react', 'react-dom'],
     },
 
     optimizeDeps: {
