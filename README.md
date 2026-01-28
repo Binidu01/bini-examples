@@ -27,6 +27,24 @@ npm run dev
 
 ---
 
+### 🛠️ Job Marketplace System
+
+A full-stack job marketplace platform connecting job posters with nearby skilled workers through intelligent location-based matching and real-time updates.
+
+- **Features**: Location-based matching, real-time job tracking, worker ratings, job lifecycle management
+- **Tech**: Bini.js, Firebase, Fastify, TypeScript, Tailwind CSS, Leaflet Maps
+- **Demo**: [Coming Soon]
+- **Directory**: `/job-marketplace`
+
+**Quick Start**:
+```bash
+cd job-marketplace
+npm install
+npm run dev
+```
+
+---
+
 > **👇 Add your example above this line** 
 >
 > Follow the template below to add a new example:
@@ -73,6 +91,8 @@ cd bini-examples
 2. Navigate to an example:
 ```bash
 cd clothing-pos
+# or
+cd job-marketplace
 ```
 
 3. Install and run:
@@ -161,7 +181,6 @@ npm run dev
 
 ### Step 4: Update Main README
 Edit `README.md` in the root directory and add your example to the "Available Examples" section using this format:
-
 ```markdown
 ### 📌 Your Example Name
 
